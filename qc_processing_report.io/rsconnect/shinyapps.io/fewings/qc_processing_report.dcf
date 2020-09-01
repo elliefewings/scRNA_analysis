@@ -1,0 +1,10 @@
+name: qc_processing_report
+title:
+username:
+account: fewings
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2733970
+bundleId: 3579502
+url: https://fewings.shinyapps.io/qc_processing_report/
+when: 1598958556.58207

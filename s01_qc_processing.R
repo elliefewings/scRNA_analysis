@@ -39,7 +39,7 @@
 #############
 
 ## Load libraries
-libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "shiny", "gridExtra", "shinyBS")
+libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "gridExtra")
 
 for (i in libs) {
   if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) { 
@@ -53,6 +53,8 @@ for (i in libs) {
 ## Find script directory
 initial.options <- commandArgs(trailingOnly = FALSE)
 script.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
+#script.dir <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis"
+
 
 #source("C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/source/source.R")
 source(paste(script.dir, "/source/source.R", sep=""))
@@ -275,14 +277,18 @@ rm(i, data.meta, input_data, libs, initial.options)
 dir.create(opt$output, showWarnings = FALSE)
 
 # Save image
-save.image(paste(opt$output, "/s01_qc_processing.Rdata", sep=""))
+rdata <- paste(opt$output, "/s01_qc_processing.Rdata", sep="")
+
+save.image(rdata)
+
 
 ######################
 ## Run Shiny Report ##
 ######################
 
-#source("C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/qc_processing_report/app.R")
-source(paste(script.dir, "/qc_processing_report/app.R", sep=""))
+source(paste(script.dir, "/qc_processing_report.pdf/app.R", sep=""))
 
-#shinyApp(ui = ui, server = server, launch.browser=TRUE)
-runApp(list(ui = ui, server = server), options(shiny.port = 80))
+app <- shinyApp(ui = ui, server = server)
+
+appshot(app,  paste(opt$output, "/", sample, ".qcprocessing.report.pdf", sep=""),  envvars = c(rdata = rdata), delay=10, port = getOption("shiny.port"), vwidth = 1500)
+

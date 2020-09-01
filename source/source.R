@@ -20,7 +20,7 @@ get_npcs <- function(seurat_object, create_plot = T){
     plt = ggplot(elbow_data, aes(x = dims, y = stdev)) +
       geom_point() + 
       geom_vline(xintercept=npcs) +
-      geom_text(aes(npcs+5, max(stdev), label=paste("Inferred NPCs:", npcs), vjust=0), size=6) +
+      geom_text(aes(npcs+10, max(stdev), label=paste("Inferred NPCs:", npcs), vjust=0), size=6) +
       xlab("Number of principle components") +
       ylab("Standard deviation of principle components") +
       theme(text = element_text(size=17), axis.text=element_text(size=12))
@@ -90,4 +90,4 @@ switchButton <- function(inputId, label, value=FALSE, col = "GB", type="TF") {
       )
     ) 
   }
-  }
+}
