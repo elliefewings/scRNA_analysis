@@ -53,4 +53,4 @@ This directory will include:
     
 Shiny interactive report can be accessed [here](http://saezlab.shinyapps.io/qc_processing_report) or via the link in the output directory.
 
-Simply upload Rdata file using the "Browse" button or drag and drop and press "Generate report" 
+Simply upload Rdata file using the "Browse" button or drag and drop and click "Generate report" 
