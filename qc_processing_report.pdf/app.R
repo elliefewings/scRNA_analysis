@@ -9,7 +9,7 @@
 
 load(rdata)
 
-# Define UI for application that draws a histogram
+# Define UI for application
 ui <- shinyUI(fluidPage(
   
   #Set style for vertical alignment
@@ -48,9 +48,10 @@ ui <- shinyUI(fluidPage(
       
    ))
 
-# Define server logic required to draw a histogram
+# Define server logic
 server <- shinyServer(function(input, output, session) {
-    
+   
+  #Set text outputs 
   output$title <- renderText({paste("QC and Data Processing Report:", sample)})
 
   inshort <- ifelse(nchar(opt$input) > 50, 
@@ -69,7 +70,6 @@ server <- shinyServer(function(input, output, session) {
   output$maxpercentmt <- renderText({HTML(paste("<b>", "Maximum Percentage MT Filter:", "</b>", opt$maxpercentmt))})
   
   #Set QC plots 
-
   output$initQC <- renderPlot({
   qc1.1 <- qc1[[1]] + theme(axis.title.x=element_blank(), axis.text.x=element_blank())
   qc1.2 <- qc1[[2]] + theme(axis.title.x=element_blank(), axis.text.x=element_blank())
@@ -103,5 +103,3 @@ server <- shinyServer(function(input, output, session) {
   
 })
 
-# Run the application 
-#shinyApp(ui = ui, server = server)

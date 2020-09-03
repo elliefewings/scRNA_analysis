@@ -1,0 +1,10 @@
+name: qc_processing_report
+title:
+username:
+account: saezlab
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2747255
+bundleId: 3588147
+url: https://saezlab.shinyapps.io/qc_processing_report/
+when: 1599130427.35397

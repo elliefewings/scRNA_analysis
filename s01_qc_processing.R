@@ -26,11 +26,31 @@
 #   QC plots, filter, normalise data, and find variable
 #   features. 
 # ============================================================
-# Usage:
+# Usage: (from terminal)
 #
+# $ ./s01_qc_processing.R [options]
 #
-#
-#
+# Options:
+#  -i INPUT, --input=INPUT
+#  Path to sample directory containing results of cellranger count [required]
+#  
+#  -o OUTPUT, --output=OUTPUT
+#  Path to desired output directory [default = input]
+#  
+#  -c MINCELLS, --mincells=MINCELLS
+#  Feature filter: Minimum number of cells expressing a feature for it to be included [default = 3]
+#  
+#  -n MINFEATURES, --minfeatures=MINFEATURES
+#  Cell filter: Minimum number of features a cell should express [default = 200]
+#  
+#  -x MAXFEATURES, --maxfeatures=MAXFEATURES
+#  Cell filter: Maximum number of features a cell should express [default = 2500]
+#  
+#  -m MAXPERCENTMT, --maxpercentmt=MAXPERCENTMT
+#  Cell filter: Maximum percentage of mitochondrial features a cell should express [default = 5]
+#  
+#  -h, --help
+#  Show this help message and exit
 #
 # ============================================================
 
@@ -50,13 +70,15 @@ for (i in libs) {
     }
 }
 
+if (is.null(webshot:::find_phantom())) {
+  webshot::install_phantomjs()
+}
+
 ## Find script directory
 initial.options <- commandArgs(trailingOnly = FALSE)
 script.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
-#script.dir <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis"
 
-
-#source("C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/source/source.R")
+## Source functions
 source(paste(script.dir, "/source/source.R", sep=""))
 
 ## Get options
@@ -76,9 +98,6 @@ option_list <- list(
 )
 
 opt <- parse_args(OptionParser(option_list=option_list))
-
-# Input for testing
-#opt$input <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/data/ERS2921927_20200806"
 
 ## Check for input and output options
 if (is.null(opt$input)) {
@@ -183,7 +202,7 @@ data <- CreateSeuratObject(counts = input_data,
 ##############
 
 # Find out how mitochrondrial genes are labelled (by selecting MT- with case insensitivity)
-mt.patt <- rownames(data)[grepl("MT-", rownames(data), ignore.case = TRUE)] %>% gsub("-.*", "-", .) %>% unique()
+mt.patt <- rownames(data)[grepl("^MT-", rownames(data), ignore.case = TRUE)] %>% gsub("-.*", "-", .) %>% unique()
 
 # Create percent.mt metric
 data[["percent.mt"]] <- PercentageFeatureSet(data, pattern = mt.patt)
@@ -286,9 +305,22 @@ save.image(rdata)
 ## Run Shiny Report ##
 ######################
 
+# Source app functions
 source(paste(script.dir, "/qc_processing_report.pdf/app.R", sep=""))
 
+# Create app
 app <- shinyApp(ui = ui, server = server)
 
+# Create PDF screenshot of app
 appshot(app,  paste(opt$output, "/", sample, ".qcprocessing.report.pdf", sep=""),  envvars = c(rdata = rdata), delay=10, port = getOption("shiny.port"), vwidth = 1500)
 
+# Create HTML with link to shiny app io
+out.html <- paste(opt$output, "/", sample, ".qcprocessing.report.html", sep="")
+
+fileConn <- file(out.html)
+writeLines(c("<html>",
+             "<head>",
+             '<meta http-equiv="refresh" content="0; url=http://saezlab.shinyapps.io/qc_processing_report" />',
+             "</head>",
+             "</html>"), fileConn)
+close(fileConn)

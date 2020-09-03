@@ -7,6 +7,7 @@
 #    http://shiny.rstudio.com/
 #
 
+# Load libraries
 library(shiny)
 library(ggplot2)
 library(gridExtra)
@@ -15,13 +16,14 @@ library(stringr)
 library(shinyBS)
 library(magrittr)
 
+# Load extra functions
 source("./source.R")
-options(shiny.maxRequestSize = 100*1024^2)
+options(shiny.maxRequestSize = 200*1024^2)
 
-# Define UI for application that draws a histogram
+# Define UI for application
 ui <- shinyUI(fluidPage(theme= "button.css",
    
-  #Set style for vertical alignment
+  # Set style for vertical alignment
   tags$head(tags$style(
     HTML('
          #vert { 
@@ -35,7 +37,7 @@ ui <- shinyUI(fluidPage(theme= "button.css",
          ')),
     tags$link(rel = "stylesheet", type = "text/css", href = "button.css")),
   
-   #Create Input
+    # Create Input
     fileInput("file", 'Choose Rdata to upload',
                             accept = c('.Rdata')),
     actionButton("load", "Generate report"),
@@ -44,7 +46,8 @@ ui <- shinyUI(fluidPage(theme= "button.css",
    # Application title
    titlePanel(textOutput("title")),
    fluidRow(tags$hr(style="border-color: black;")),
-   #Summary data
+   
+   # Summary data
    fluidRow(column(4, align="left", h3(tags$b("Script options"))), column(6, align="center", h3(tags$b("Quality Control Plots"))), 
             column(2, switchButton(inputId="filter", label = "Show Filtered Data", value = FALSE, col = "GB", type = "TF")
    )),
@@ -59,12 +62,10 @@ ui <- shinyUI(fluidPage(theme= "button.css",
                      uiOutput("maxfeatures"),
                      uiOutput("maxpercentmt")
                      ),
-                   #wellPanel(
-                     #downloadButton("downloadData", "Download")),
                    wellPanel(align="center", tableOutput("sum"))),
             column(8, align="right", id="vert", plotOutput("initQC", width="100%", height="600px"))),
   
-   #PCA plots
+   # PCA plots
    fluidRow(tags$hr(style="border-color: black;")),
    fluidRow(column(5, align="center", h3(tags$b("Selection of Principle Components"))), column(5, align="center", h3(tags$b("Plotting Principle Components"))), column(2, textInput("gene", "Show feature:", ""), actionButton("search", "Search"))),
    fluidRow(column(6, align="right", id="vert", plotOutput("npcs", width="80%", height="400px")), column(6, id="vert", align="left", plotOutput("pca", width="80%", height="400px"))),
@@ -72,19 +73,21 @@ ui <- shinyUI(fluidPage(theme= "button.css",
       
    ))
 
-# Define server logic required to draw a histogram
+# Define server logic
 server <- shinyServer(function(input, output, session) {
   
-  #Load data
+  # Load data
   load_Rdata <- function(){
     if(is.null(input$file)){return(NULL)} 
     rdata <- isolate({input$file})
     load(rdata$datapath, envir = .GlobalEnv)
   }
   
+  # Create event when report load button is activated
   observeEvent(input$load,{
     load_Rdata()
     
+    #Set text outputs
     output$title <- renderText({paste("QC and Data Processing Report:", sample)})
   
     inshort <- ifelse(nchar(opt$input) > 50, 
