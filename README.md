@@ -1,6 +1,11 @@
 # scRNA_analysis
-
 ## R script to perform Seurat based analysis of cellranger output
+### Requirements
+ * R >= version 3.4
+ * scRNAseq data processed by Cellranger count
+
+    If you don't have an appropriate Cellranger count output (outs/filtered_feature_bc_matrix), you can create this from fastqs using [this cellranger wrapper](https://github.com/elliefewings/cellranger_wrapper)
+
 ### Basic process:
   1. Creation of quality control plots
   2. Filtering of cells and features based on default or input criteria
