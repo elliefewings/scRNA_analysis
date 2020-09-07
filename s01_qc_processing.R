@@ -49,6 +49,9 @@
 #  -m MAXPERCENTMT, --maxpercentmt=MAXPERCENTMT
 #  Cell filter: Maximum percentage of mitochondrial features a cell should express [default = 5]
 #  
+#  -r HASHTAG, --hashtag=HASHTAG
+#  Path to UMI hashtag data from CITE-seq
+#
 #  -h, --help
 #  Show this help message and exit
 #
@@ -59,7 +62,7 @@
 #############
 
 ## Load libraries
-libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "gridExtra")
+libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "gridExtra", "RColorBrewer")
 
 for (i in libs) {
   if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) { 
@@ -94,7 +97,9 @@ option_list <- list(
   make_option(c("--maxfeatures", "-x"), action="store", default=2500, type='integer',
               help="Cell filter: Maximum number of features a cell should express [default = 2500]"),
   make_option(c("--maxpercentmt", "-m"), action="store", default=5, type='numeric',
-              help="Cell filter: Maximum percentage of mitochondrial features a cell should express [default = 5]")
+              help="Cell filter: Maximum percentage of mitochondrial features a cell should express [default = 5]"),
+  make_option(c("--hashtag", "-r"), action="store", default=NULL, type='character',
+              help="Path to UMI hashtag data from CITE-seq")
 )
 
 opt <- parse_args(OptionParser(option_list=option_list))
@@ -182,6 +187,16 @@ if (opt$maxpercentmt < 2) {
   warning("WARNING: Option --maxfeatures/-x filter is LOW, consider changing to a number greater than 1")
 }
 
+# If hashtag mode implemented, check if file exists
+
+if (!is.null(opt$hashtag)) {
+  hashdir <- paste(opt$hashtag, "/umi_count", sep="") %>% str_replace_all("/umi_count/umi_count", "/umi_count") %>% str_replace_all("/umi_count//umi_count", "/umi_count") 
+  if (!file.exists(hashdir)){
+    message(paste("ERROR: Hashtag directory doesn't exist or doesn't contain CITE-seq output: ", hashdir, sep=""))
+    stop(parse_args(OptionParser(option_list=option_list), args = c("--help"))) 
+  }
+}
+
 ###############
 ## Load data ##
 ###############
@@ -192,11 +207,37 @@ sample <- indir %>% str_replace_all("/outs/filtered_feature_bc_matrix", "") %>% 
 # Read 10x data
 input_data <- Read10X(data.dir = indir)
 
-# Create Seurat object using mincells filter
-data <- CreateSeuratObject(counts = input_data, 
-                   project = sample, 
-                   min.cells = opt$mincells)
+# Find if hashtag mode is implemented and load data including hashtags
+if (!is.null(opt$hashtag)) {
+  
+  umis <- Read10X(data.dir = hashdir, gene.column = 1)
+  
+  #Remove barcodes with few counts and unmapped
+  umis <- umis[rowSums(as.data.frame(umis)) > 100 & row.names(umis) != "unmapped",]
+  
+  # Add -1 to header
+  colnames(umis) <- paste(colnames(umis), "-1", sep="") %>% str_replace_all("-1-1", "-1")
+  
+  # Find intersection
+  joint.bcs <- intersect(colnames(input_data), colnames(umis))
+  
+  # Subset RNA and HTO counts by the joint cell barcodes
+  input_data <- input_data[,joint.bcs]
+  umis <- as.matrix(umis[,joint.bcs])
 
+  # Create Seurat Object
+  data <- CreateSeuratObject(counts = input_data, 
+                             project = sample, 
+                             min.cells = opt$mincells)
+  
+  # Add HTO data
+  data[["HTO"]] <- CreateAssayObject(counts = umis)
+} else {
+
+  data <- CreateSeuratObject(counts = input_data, 
+                           project = sample, 
+                           min.cells = opt$mincells)
+}
 ##############
 ## QC Plots ##
 ##############
@@ -260,6 +301,53 @@ qc2.f <- FeatureScatter(data, feature1 = "nCount_RNA", feature2 = "percent.mt", 
 
 qc3.f <- FeatureScatter(data, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", cols="steelblue4")
 
+#################
+## Demultiplex ##
+#################
+if (!is.null(opt$hashtag)) {
+  
+  # Normalize HTO data, here we use centered log-ratio (CLR) transformation
+  data <- NormalizeData(data, assay = "HTO", normalization.method = "CLR")
+  
+  # Demultiplex
+  data <- HTODemux(data, assay="HTO", positive.quantile = 0.99)
+  
+  db.count <- table(data$HTO_classification.global) %>% as.data.frame()
+  
+  db.count$Var1 <- factor(db.count$Var1, levels=c("Doublet", "Singlet", "Negative"))
+  
+  # Plot number of doublets and singlets
+  doublet <- ggplot(db.count, aes(x=Var1, y=Freq, fill=Var1)) +
+    geom_bar(stat="identity") +
+    scale_fill_manual(values=c("darkblue","lightblue", "grey")) +
+    xlab("") +
+    ylab("Cell Count") +
+    theme(legend.position="none")
+  
+  # Plot expression amongst different barcodes
+  Idents(data) <- 'HTO_maxID'
+  
+  ridge <- RidgePlot(data, assay = 'HTO', features = rownames(umis), ncol = 1, cols=brewer.pal(n=nrow(umis),"PuBuGn"))
+  
+  # Extract singlets
+  Idents(data) <- 'HTO_classification.global'
+  
+  data <- subset(data, idents = 'Singlet')
+  
+  # Add to data table after filtering doublets
+  data.meta <- data@meta.data
+  data.meta.summ$Singlets <- summarise(data.meta, ncells = length(orig.ident),
+                                               med_nCount_RNA = median(nCount_RNA),
+                                               min_nCount_RNA = min(nCount_RNA),
+                                               max_nCount_RNA = max(nCount_RNA),
+                                               med_nFeature_RNA = median(nFeature_RNA),
+                                               min_nFeature_RNA = min(nFeature_RNA),
+                                               max_nFeature_RNA = max(nFeature_RNA),
+                                               med_percent.mt = median(percent.mt),
+                                               min_percent.mt = min(percent.mt),
+                                               max_percent.mt = max(percent.mt)) %>% t()
+  
+  }
 
 ###################
 ## Normalisation ##
@@ -290,7 +378,7 @@ pca <- DimPlot(data, reduction = "pca")
 #######################
 
 # Remove old data
-rm(i, data.meta, input_data, libs, initial.options)
+suppressWarnings(rm(i, data.meta, input_data, libs, initial.options, hashdir, joint.bcs))
 
 # Create output directory
 dir.create(opt$output, showWarnings = FALSE)

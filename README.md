@@ -9,12 +9,13 @@
 ### Basic process:
   1. Creation of quality control plots
   2. Filtering of cells and features based on default or input criteria
-  3. Data normalisation
-  4. Find variable features
-  5. Scale data
-  6. Run PCA and find appropriate principle components
-  7. Save data
-  8. Create PDF and interactive data report
+  3. Demultiplex if hashtag option applied
+  4. Data normalisation
+  5. Find variable features
+  6. Scale data
+  7. Run PCA and find appropriate principle components
+  8. Save data
+  9. Create PDF and interactive data report
   
 ## Usage
 ```
@@ -38,6 +39,9 @@
   
   -m MAXPERCENTMT, --maxpercentmt=MAXPERCENTMT
   Cell filter: Maximum percentage of mitochondrial features a cell should express [default = 5]
+  
+  -r HASHTAG, --hashtag=HASHTAG
+  Path to UMI hashtag data from CITE-seq
   
   -h, --help
   Show this help message and exit
