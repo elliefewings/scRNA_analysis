@@ -71,6 +71,11 @@ ui <- shinyUI(fluidPage(theme= "button.css",
                         fluidRow(column(6, align="right", id="vert", plotOutput("npcs", width="80%", height="400px")), column(6, id="vert", align="left", plotOutput("pca", width="80%", height="400px"))),
                         fluidRow(tags$hr(style="border-color: black;")),
                         
+                        # Clustree plot
+                        fluidRow(column(12, align="center",  h3(tags$b("Selection of K from Clustree")))),
+                        fluidRow(column(12, align="center", offset=2, id="vert", plotOutput("clust", width="60%", height="1000px"))),
+                        fluidRow(tags$hr(style="border-color: black;")),
+                        
                         # Demultiplex plots
                         fluidRow(column(5, align="center", h3(tags$b(textOutput("doubtitle")))), column(7, align="center", h3(tags$b(textOutput("hashtitle"))))),
                         fluidRow(column(5, align="right", id="vert", plotOutput("doublets", width="80%", height="700px")), column(7, id="vert", align="right", plotOutput("hashtags", width="80%", height="700px")))
@@ -177,6 +182,9 @@ server <- shinyServer(function(input, output, session) {
         plot4
       })
     })
+    
+    # Plot clustree data
+    output$clust <- renderPlot(clust)
     
     #Plot hashtag data
     

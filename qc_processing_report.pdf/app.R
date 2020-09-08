@@ -45,10 +45,15 @@ ui <- shinyUI(fluidPage(
    fluidRow(column(6, align="center", h3(tags$b("Selection of Principle Components"))), column(6, align="center", h3(tags$b("Plotting Principle Components")))),
    fluidRow(column(6, align="center", id="vert", plotOutput("npcs", width="80%", height="400px")), column(6, id="vert", align="center", plotOutput("pca", width="80%", height="400px"))),
    fluidRow(tags$hr(style="border-color: black;")),
-    
-   #Demultiplex plots
-   fluidRow(column(5, align="center", h3(tags$b(textOutput("doubtitle")))), column(7, align="center", h3(tags$b(textOutput("hashtitle"))))),
-   fluidRow(column(5, align="right", id="vert", plotOutput("doublets", width="80%", height="700px")), column(7, id="vert", align="right", plotOutput("hashtags", width="80%", height="700px")))
+  
+    # Clustree plot
+    fluidRow(column(12, align="center",  h3(tags$b("Selection of K from Clustree")))),
+    fluidRow(column(12, align="center", offset=2, id="vert", plotOutput("clust", width="60%", height="1000px"))),
+    fluidRow(tags$hr(style="border-color: black;")),
+  
+    #Demultiplex plots
+    fluidRow(column(5, align="center", h3(tags$b(textOutput("doubtitle")))), column(7, align="center", h3(tags$b(textOutput("hashtitle"))))),
+    fluidRow(column(5, align="right", id="vert", plotOutput("doublets", width="80%", height="700px")), column(7, id="vert", align="right", plotOutput("hashtags", width="80%", height="700px")))
       
    ))
 
@@ -104,6 +109,9 @@ server <- shinyServer(function(input, output, session) {
   
   #Set PCA and feature plot event
   output$pca <- renderPlot(pca + theme(text = element_text(size=20), legend.position = "none"))
+  
+  # Plot clustree data
+  output$clust <- renderPlot(clust)
   
   #Plot hashtag data
   if (!is.null(opt$hashtag)) {

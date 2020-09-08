@@ -62,7 +62,7 @@
 #############
 
 ## Load libraries
-libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "gridExtra", "RColorBrewer")
+libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "gridExtra", "RColorBrewer", "clustree")
 
 for (i in libs) {
   if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) { 
@@ -373,12 +373,25 @@ npcs <- get_npcs(seurat_object = data, create_plot = TRUE)
 
 pca <- DimPlot(data, reduction = "pca")
 
+########################
+## Initial Clustering ##
+########################
+
+data <- invisible(FindNeighbors(data, reduction="pca", dims=1:npcs$npcs, verbose=FALSE))
+
+data <- invisible(FindClusters(data, resolution = seq(from=0.1, to=1.5, by=0.1), verbose=FALSE))
+
+clust <- clustree(data) + theme(
+  legend.title = element_text(size = 16),
+  legend.text = element_text(size = 12)) +
+  guides(colour = guide_legend(override.aes = list(size=5)))
+
 #######################
 ## Clean up and Save ##
 #######################
 
 # Remove old data
-suppressWarnings(rm(i, data.meta, input_data, libs, initial.options, hashdir, joint.bcs))
+suppressWarnings(rm(i, data.meta, input_data, libs, initial.options, hashdir, joint.bcs, option_list))
 
 # Create output directory
 dir.create(opt$output, showWarnings = FALSE)
