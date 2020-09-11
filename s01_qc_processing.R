@@ -381,7 +381,7 @@ data <- invisible(FindNeighbors(data, reduction="pca", dims=1:npcs$npcs, verbose
 
 data <- invisible(FindClusters(data, resolution = seq(from=0.1, to=1.5, by=0.1), verbose=FALSE))
 
-clust <- clustree(data) + theme(
+clust <- suppressWarnings(clustree(data)) + theme(
   legend.title = element_text(size = 16),
   legend.text = element_text(size = 12)) +
   guides(colour = guide_legend(override.aes = list(size=5)))

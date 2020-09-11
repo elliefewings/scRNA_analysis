@@ -32,3 +32,40 @@ get_npcs <- function(seurat_object, create_plot = T){
   
 }
 
+# Assign cell identities using file of marker genes and likely cell types
+assign.identity <- function(seurat_object, markers){
+  
+  #Find significant marker genes for each cluster
+  all.markers <- FindAllMarkers(seurat_object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, verbose = FALSE)
+  
+  #Create one row for each cell.type label and marker gene
+  identity <- strsplit(markers$Markers, ",")
+  markers <- data.frame(Cell.Type = rep(markers$Cell.Type, sapply(identity, length)), Markers = unlist(identity))
+  
+  #Make sure both gene names are in sentence case
+  markers$Markers <- str_to_sentence(markers$Markers)
+  all.markers$gene <- str_to_sentence(all.markers$gene)
+  
+  #Merge identity on if available
+  add <- merge(markers, all.markers, by.x="Markers", by.y="gene", all.y=TRUE)
+  
+  #Subset identity and cluster numbers
+  ids <- add %>% select("Cell.Type", "cluster") %>% unique()
+  
+  #Gather identities if multiple per cluster
+  ids <- ids %>% group_by(cluster) %>% mutate(label=paste(Cell.Type, collapse=",")) %>% select(-Cell.Type) %>% unique()
+  
+  #Remove "NA," values 
+  ids$label <- str_replace_all(ids$label, "NA,", "") 
+  
+  #Convert "NA" character to NA
+  ids$label[ids$label == "NA"] <- NA
+  
+  #Reorder
+  ids <- ids[order(ids$cluster),]
+  
+  #Return
+  return(ids)
+}
+  
+  

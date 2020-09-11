@@ -48,7 +48,7 @@ ui <- shinyUI(fluidPage(
   
     # Clustree plot
     fluidRow(column(12, align="center",  h3(tags$b("Selection of K from Clustree")))),
-    fluidRow(column(12, align="center", offset=2, id="vert", plotOutput("clust", width="60%", height="1000px"))),
+    fluidRow(column(12, align="center", id="vert", plotOutput("clust", width="60%", height="800px"))),
     fluidRow(tags$hr(style="border-color: black;")),
   
     #Demultiplex plots
@@ -112,7 +112,6 @@ server <- shinyServer(function(input, output, session) {
   
   # Plot clustree data
   output$clust <- renderPlot(clust)
-  
   #Plot hashtag data
   if (!is.null(opt$hashtag)) {
     output$doubtitle <- renderText("Number of Doublets Identified")

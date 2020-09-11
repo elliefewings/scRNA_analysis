@@ -1,0 +1,10 @@
+Cell Type	Markers
+Naive CD4+ T	"IL7R,CCR7"
+Memory CD4+	"IL7R,S100A4,Coro1a"
+CD14+ Mono	"CD14,LYZ"
+B	MS4A1
+CD8+ T	CD8A
+FCGR3A+ Mono	"FCGR3A,MS4A7"
+NK	"GNLY,NKG7"
+DC	"FCER1A,CST3"
+Platelet	PPBP

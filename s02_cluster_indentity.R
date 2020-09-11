@@ -93,10 +93,12 @@ option_list <- list(
               help="Path to Rdata output of s01_qc_processing.R (s01_qc_processing.Rdata) [required]"),
   make_option(c("--output", "-o"), action="store", default=NULL, type='character',
               help="Path to desired output directory [default = directory of input]"),
-  make_option(c("--npc", "-n"), action="store", default=NULL, type='character',
-              help="Number of principle components for clustering [default = decided by elbow plot in previous stage of pipeline]"),
-  make_option(c("--hashtag", "-r"), action="store", default=NULL, type='character',
-              help="Path to UMI hashtag data from CITE-seq")
+  make_option(c("--npc", "-n"), action="store", default="", type='integer',
+              help="Number of principle components for clustering [default = see elbow plot in s01 report]"),
+  make_option(c("--res", "-k"), action="store", default=0.5, type='numeric',
+              help="Resolution for clustering (see clustree output in s01 report)[default = 0.5]"),
+  make_option(c("--markers", "-m"), action="store", default="", type='character',
+              help="Path to text file containing marker genes, see README for example")
 )
 
 opt2 <- parse_args(OptionParser(option_list=option_list))
@@ -111,10 +113,35 @@ if (is.null(opt2$output)) {
   opt2$output <- dirname(opt2$input)
 }
 
+# Generate warning messing if npcs or resolution is outside expected values
+
+if ( !is.na(opt2$npc) & opt2$npc < 2 ) {
+  warning("WARNING: Option --npc/-n is LOW, consider changing to a number greater than 2")
+}
+
+if ( !is.na(opt2$npc) & opt2$npc >= 20 ) {
+  warning("WARNING: Option --npc/-n is HIGH, consider changing to a number less than 20")
+}
+
+if ( opt2$res < 0.1 ) {
+  warning("WARNING: Option --res/-k is LOW, consider changing to a number greater than 0.1")
+}
+
+if ( opt2$res >= 20 ) {
+  warning("WARNING: Option --res/-k is HIGH, consider changing to a number less than 20")
+}
+
+# Check if marker file is supplied and if it exists
+
+if (opt2$markers != "" & !file.exists(opt2$markers)) {
+  message("ERROR: Markers file does not exist.")
+  stop(parse_args(OptionParser(option_list=option_list), args = c("--help")))
+}
 
 ###############
 ## Load data ##
 ###############
+opt2$input <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/data/CK114/pipeline_output/s01_qc_processing.Rdata"
 
 # Load Rdata from input
 load(opt2$input)
@@ -122,32 +149,83 @@ load(opt2$input)
 # Reload script directory
 initial.options <- commandArgs(trailingOnly = FALSE)
 script.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
+script.dir <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/"
 
 # Clean-up previous script data
 rm(data.meta.summ, i, indir, libs, pca, qc1, qc1.f, qc2, qc2.f, qc3, qc3.f)
 
-###################
-## Find Clusters ##
-###################
+######################
+## Cluster and UMAP ##
+######################
 
-data <- FindNeighbors(data, reduction="pca", dims=1:npcs$npcs)
+# Set NPC from elbow plot if not set in params
+if (is.na(opt2$npc)) {
+  opt2$npc <- npcs$npcs
+}
 
-data <- FindClusters(data, resolution = seq(from=0.1, to=1.5, by=0.1))
+# Find clusters based on set resolution
+data <- FindClusters(data, resolution = opt2$res)
 
-clustree(data)
+# Run UMAP
+data <- RunUMAP(data, reduction = "pca", dims = 1:opt2$npc)
+
+# Plot clusters
+pca <- DimPlot(data, reduction = "umap")
+
+##################
+## Find Markers ##
+##################
+
+# Find markers for all clusters
+all.markers <- FindAllMarkers(data, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+
+# Find number of genes needed per cluster to achieve 100 genes total for heatmap
+ngenes <- round(100/nlevels(all.markers$cluster))
+
+# Gather 100 genes total from top of each cluster
+top <- all.markers %>% group_by(cluster) %>% top_n(ngenes, avg_logFC)
+
+# Plot heatmap
+heat <- suppressWarnings(DoHeatmap(object = data, features = top$gene, label = TRUE))
+
+##########################
+## Find Cell Identities ##
+##########################
+
+if (opt2$markers != "") { 
+
+  # Read in marker genes
+  marker <- read.table(opt2$markers, sep="\t", header = TRUE)
+  
+  # Assign cluster number to cell identities
+  ids <- assign.identity(data, marker)
+
+  # If found, apply cell type to cluster
+  ids$label <- ifelse(is.na(ids$label), levels(ids$cluster), ids$label)
+  
+  # Set new ids
+  new.ids <- ids$label
+  
+  names(new.ids) <- levels(data)
+  
+  data <- RenameIdents(data, new.ids)
+  
+  # Replot with new cell identities
+  pca2 <- DimPlot(data, reduction = "umap", label = TRUE, pt.size = 1, label.size = 6) 
+  }
 
 #######################
 ## Clean up and Save ##
 #######################
 
 # Remove old data
-suppressWarnings(rm(i, data.meta, input_data, libs, initial.options, hashdir, joint.bcs))
+suppressWarnings(rm(ids, marker, top, new.ids, ngenes, option_list, rdata))
 
 # Create output directory
-dir.create(opt$output, showWarnings = FALSE)
+dir.create(opt2$output, showWarnings = FALSE)
 
 # Save image
-rdata <- paste(opt$output, "/s01_qc_processing.Rdata", sep="")
+rdata <- paste(opt2$output, "/s02_cluster_identity.Rdata", sep="")
 
 save.image(rdata)
 
