@@ -28,32 +28,26 @@
 # ============================================================
 # Usage: (from terminal)
 #
-# $ ./s01_qc_processing.R [options]
+# $ ./s02_cluster_identity.R [options]
 #
-# Options:
+#Options:
 #  -i INPUT, --input=INPUT
-#  Path to sample directory containing results of cellranger count [required]
-#  
-#  -o OUTPUT, --output=OUTPUT
-#  Path to desired output directory [default = input]
-#  
-#  -c MINCELLS, --mincells=MINCELLS
-#  Feature filter: Minimum number of cells expressing a feature for it to be included [default = 3]
-#  
-#  -n MINFEATURES, --minfeatures=MINFEATURES
-#  Cell filter: Minimum number of features a cell should express [default = 200]
-#  
-#  -x MAXFEATURES, --maxfeatures=MAXFEATURES
-#  Cell filter: Maximum number of features a cell should express [default = 2500]
-#  
-#  -m MAXPERCENTMT, --maxpercentmt=MAXPERCENTMT
-#  Cell filter: Maximum percentage of mitochondrial features a cell should express [default = 5]
-#  
-#  -r HASHTAG, --hashtag=HASHTAG
-#  Path to UMI hashtag data from CITE-seq
+#Path to Rdata output of s01_qc_processing.R (s01_qc_processing.Rdata) [required]
 #
-#  -h, --help
-#  Show this help message and exit
+#-o OUTPUT, --output=OUTPUT
+#Path to desired output directory [default = directory of input]
+#
+#-n NPC, --npc=NPC
+#Number of principle components for clustering [default = see elbow plot in s01 report]
+#
+#-k RES, --res=RES
+#Resolution for clustering (see clustree output in s01 report)[default = 0.5]
+#
+#-m MARKERS, --markers=MARKERS
+#Path to text file containing marker genes, see README for example
+#
+#-h, --help
+#Show this help message and exit
 #
 # ============================================================
 
@@ -82,10 +76,10 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 script.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
 
 #For testing
-script.dir <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/"
+#script.dir <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/s02_cluster_identity/"
 
 ## Source functions
-source(paste(script.dir, "/source/source.R", sep=""))
+source(paste(script.dir, "/../source/source.R", sep=""))
 
 ## Get options
 option_list <- list(
@@ -141,7 +135,7 @@ if (opt2$markers != "" & !file.exists(opt2$markers)) {
 ###############
 ## Load data ##
 ###############
-opt2$input <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/data/CK114/pipeline_output/s01_qc_processing.Rdata"
+#opt2$input <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/data/CK114/pipeline_output/s01_qc_processing.Rdata"
 
 # Load Rdata from input
 load(opt2$input)
@@ -149,7 +143,7 @@ load(opt2$input)
 # Reload script directory
 initial.options <- commandArgs(trailingOnly = FALSE)
 script.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
-script.dir <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/"
+#script.dir <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/s02_cluster_identity/"
 
 # Clean-up previous script data
 rm(data.meta.summ, i, indir, libs, pca, qc1, qc1.f, qc2, qc2.f, qc3, qc3.f)
@@ -164,10 +158,10 @@ if (is.na(opt2$npc)) {
 }
 
 # Find clusters based on set resolution
-data <- FindClusters(data, resolution = opt2$res)
+data <- FindClusters(data, resolution = opt2$res, verbose = FALSE)
 
 # Run UMAP
-data <- RunUMAP(data, reduction = "pca", dims = 1:opt2$npc)
+data <- RunUMAP(data, reduction = "pca", dims = 1:opt2$npc, verbose = FALSE)
 
 # Plot clusters
 pca <- DimPlot(data, reduction = "umap")
@@ -177,7 +171,7 @@ pca <- DimPlot(data, reduction = "umap")
 ##################
 
 # Find markers for all clusters
-all.markers <- FindAllMarkers(data, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+all.markers <- suppressMessages(FindAllMarkers(data, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, verbose = FALSE))
 
 # Find number of genes needed per cluster to achieve 100 genes total for heatmap
 ngenes <- round(100/nlevels(all.markers$cluster))
@@ -199,9 +193,9 @@ if (opt2$markers != "") {
   
   # Assign cluster number to cell identities
   ids <- assign.identity(data, marker)
-
+  
   # If found, apply cell type to cluster
-  ids$label <- ifelse(is.na(ids$label), levels(ids$cluster), ids$label)
+  ids$label <- ifelse(is.na(ids$label), levels(ids$cluster), paste(ids$cluster, ids$label,  sep="-"))
   
   # Set new ids
   new.ids <- ids$label
@@ -219,7 +213,7 @@ if (opt2$markers != "") {
 #######################
 
 # Remove old data
-suppressWarnings(rm(ids, marker, top, new.ids, ngenes, option_list, rdata))
+suppressWarnings(rm(marker, top, new.ids, ngenes, option_list, rdata))
 
 # Create output directory
 dir.create(opt2$output, showWarnings = FALSE)
@@ -235,21 +229,21 @@ save.image(rdata)
 ######################
 
 # Source app functions
-source(paste(script.dir, "/qc_processing_report.pdf/app.R", sep=""))
+source(paste(script.dir, "/cluster_identity_report.pdf/app.R", sep=""))
 
 # Create app
 app <- shinyApp(ui = ui, server = server)
 
 # Create PDF screenshot of app
-appshot(app,  paste(opt$output, "/", sample, ".qcprocessing.report.pdf", sep=""),  envvars = c(rdata = rdata), delay=10, port = getOption("shiny.port"), vwidth = 1500)
+appshot(app,  paste(opt2$output, "/", sample, ".clusteridentity.report.pdf", sep=""),  envvars = c(rdata = rdata), delay=10, port = getOption("shiny.port"), vwidth = 1500)
 
 # Create HTML with link to shiny app io
-out.html <- paste(opt$output, "/", sample, ".qcprocessing.report.html", sep="")
+out.html <- paste(opt2$output, "/", sample, ".clusteridentity.report.html", sep="")
 
 fileConn <- file(out.html)
 writeLines(c("<html>",
              "<head>",
-             '<meta http-equiv="refresh" content="0; url=http://saezlab.shinyapps.io/qc_processing_report" />',
+             '<meta http-equiv="refresh" content="0; url=https://saezlab.shinyapps.io/cluster_identity_report" />',
              "</head>",
              "</html>"), fileConn)
 close(fileConn)

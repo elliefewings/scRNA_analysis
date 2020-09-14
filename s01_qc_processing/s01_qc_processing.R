@@ -82,7 +82,7 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 script.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial.options)]))
 
 ## Source functions
-source(paste(script.dir, "/source/source.R", sep=""))
+source(paste(script.dir, "../source/source.R", sep=""))
 
 ## Get options
 option_list <- list(

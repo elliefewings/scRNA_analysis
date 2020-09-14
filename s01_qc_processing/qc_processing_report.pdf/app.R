@@ -24,7 +24,7 @@ ui <- shinyUI(fluidPage(
   
    # Application title
    titlePanel(textOutput("title")),
-   fluidRow(HTML("<h3>For interactive report, load RData output here: <a href='https://fewings.shinyapps.io/qc_processing_report'> </a></h3>")),
+   fluidRow(HTML("<h3>For interactive report, load RData output here: <a href='https://saezlab.shinyapps.io/qc_processing_report'> </a></h3>")),
    fluidRow(tags$hr(style="border-color: black;")),
    #Summary data
    fluidRow(column(4, align="left", h3(tags$b("Script options"))), column(8, align="center", h3(tags$b("Quality Control Plots")))),
