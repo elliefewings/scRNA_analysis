@@ -69,14 +69,20 @@ server <- shinyServer(function(input, output, session) {
     
     #Set heatmap
     output$heatmap <- renderPlot(heat)
-    
-    #Set markers table
-    output$markers <- renderTable(ids)
-    
-    #Set PCA and feature plot event
-    output$umap <- renderPlot(pca2 + theme(text = element_text(size=20)))
 
     
+    #Set PCA and feature plot event
+    if (opt2$markers != "") { 
+      
+      #Set markers table
+      output$markers <- renderTable(ids)
+      output$umap <- renderPlot(pca2 + theme(text = element_text(size=20)))
+
+    } else {
+      
+      output$umap <- renderPlot(pca + theme(text = element_text(size=20)))
+      
+    }
   })
 
 

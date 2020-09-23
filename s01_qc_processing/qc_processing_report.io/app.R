@@ -15,10 +15,11 @@ library(Seurat)
 library(stringr)
 library(shinyBS)
 library(magrittr)
+library(clustree)
 
 # Load extra functions
 source("./source.R")
-options(shiny.maxRequestSize = 200*1024^2)
+options(shiny.maxRequestSize = 400*1024^2)
 
 # Define UI for application
 ui <- shinyUI(fluidPage(theme= "button.css",

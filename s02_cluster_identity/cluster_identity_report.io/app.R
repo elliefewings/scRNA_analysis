@@ -17,7 +17,7 @@ library(shinyBS)
 library(magrittr)
 
 # Change data load maximum
-options(shiny.maxRequestSize = 200*1024^2)
+options(shiny.maxRequestSize = 500*1024^2)
 
 # Define UI for application
 ui <- shinyUI(fluidPage(
@@ -120,42 +120,62 @@ server <- shinyServer(function(input, output, session) {
     #Set markers table
     #colnames(ids) <- c("")
     
-    output$markers <- renderTable(ids)
-
     #Set PCA and feature plot event
-    output$umap <- renderPlot(pca2 + theme(text = element_text(size=20)))
-    
-    featurePlotter <- eventReactive(input$search, {
-      if (input$gene == "") {
-        plot.g <- pca2 + theme(text = element_text(size=20))
-        
-      }
-      if (input$gene != "") {
-        genen <- str_to_title(input$gene) %>% str_replace("MT-", mt.patt)
-        plot.g <- FeaturePlot(data, features = genen) + theme(text = element_text(size=20))
-      }
-      plot.g
-    })
-    
-    observeEvent(input$search, {
-      output$umap <- renderPlot({
-        plot.g <- featurePlotter()
+    if (opt2$markers != "") { 
+      
+      #Set markers table
+      output$markers <- renderTable(ids)
+      output$umap <- renderPlot(pca2 + theme(text = element_text(size=20)))
+      
+      featurePlotter <- eventReactive(input$search, {
+        if (input$gene == "") {
+          plot.g <- pca2 + theme(text = element_text(size=20))
+          
+        }
+        if (input$gene != "") {
+          genen <- str_to_title(input$gene) %>% str_replace("MT-", mt.patt)
+          plot.g <- FeaturePlot(data, features = genen) + theme(text = element_text(size=20))
+        }
         plot.g
       })
-    })
-    
-    # Plot clustree data
-    output$clust <- renderPlot(clust)
-    
-    #Plot hashtag data
-    
-    if (!is.null(opt2$hashtag)) {
-    output$doubtitle <- renderText("Number of Doublets Identified")
-    output$hashtitle <- renderText("Expression Counts Over Hashtags")
-    output$doublets <- renderPlot(doublet)
-    output$hashtags <- renderPlot(ridge)
-    } 
-    
+      
+      observeEvent(input$search, {
+        output$umap <- renderPlot({
+          plot.g <- featurePlotter()
+          plot.g
+        })
+      })
+    } else {
+      
+      #Set markers table
+      output$markers <- renderTable(
+        validate(
+        need(exists("ids"), "No markers supplied")
+      ))
+      
+      output$umap <- renderPlot(pca + theme(text = element_text(size=20)))
+      
+      featurePlotter <- eventReactive(input$search, {
+        if (input$gene == "") {
+          plot.g <- pca + theme(text = element_text(size=20))
+          
+        }
+        if (input$gene != "") {
+          genen <- str_to_title(input$gene) %>% str_replace("MT-", mt.patt)
+          plot.g <- FeaturePlot(data, features = genen) + theme(text = element_text(size=20))
+        }
+        plot.g
+      })
+      
+      observeEvent(input$search, {
+        output$umap <- renderPlot({
+          plot.g <- featurePlotter()
+          plot.g
+        })
+      })
+      
+      
+    }
     
     
   })
