@@ -1,4 +1,4 @@
-# scRNA_analysis
+# s01_qc_processing
 ## R script to perform Seurat based analysis of cellranger output
 ### Requirements
  * R >= version 3.4
