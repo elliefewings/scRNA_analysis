@@ -1,10 +1,11 @@
-# s01_qc_processing
-## R script to perform Seurat based analysis of cellranger output
+# scRNA_analysis - s01_qc_processing
+## R script to perform Seurat based processing and qc of cellranger output
+
 ### Requirements
  * R >= version 3.4
  * scRNAseq data processed by Cellranger count
 
-    If you don't have an appropriate Cellranger count output (outs/filtered_feature_bc_matrix), you can create this from fastqs using [this cellranger wrapper](https://github.com/elliefewings/cellranger_wrapper)
+    If you don't have an appropriate Cellranger count output (outs/filtered_feature_bc_matrix), you can create this from fastqs using [this cellranger wrapper](https://github.com/elliefewings/scRNA_raw_data_toolkit)
 
 ### Basic process:
   1. Creation of quality control plots
@@ -60,6 +61,6 @@ This directory will include:
     3. sample_name.qcprocessing.report.html - Link to interactive shiny report showing raw and filtered data metrics and interactive princple component exploration
     
     
-Shiny interactive report can be accessed [here](http://saezlab.shinyapps.io/qc_processing_report) or via the link in the output directory.
+Shiny interactive report can be accessed [here](https://saezlab.shinyapps.io/qc_processing_report/) via the link in the output directory.
 
-Simply upload Rdata file using the "Browse" button or drag and drop and click "Generate report" 
+Simply upload s01 Rdata file using the "Browse" button or drag and drop and click "Generate report" 
