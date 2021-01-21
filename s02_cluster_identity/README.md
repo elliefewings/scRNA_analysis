@@ -17,8 +17,7 @@
   
 ## Usage
 ```
-$ s02_cluster_identity/s02_cluster_identity.R -h
-Usage: s02_cluster_identity/s02_cluster_identity.R [options]
+$ ./s02_cluster_identity.R [options]
 
 
 Options:
