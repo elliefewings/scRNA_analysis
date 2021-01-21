@@ -1,3 +1,5 @@
 rsconnect/
-qc_processing_report.io/rsconnect/
+s01_qc_processing/qc_processing_report.io/rsconnect/
 .nfs*
+s01_qc_processing/qc_processing_report.io/www
+s02_cluster_identity/cluster_identity_report.io/www

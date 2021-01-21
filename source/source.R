@@ -49,17 +49,27 @@ assign.identity <- function(seurat_object, markers){
   #Merge identity on if available
   add <- merge(markers, all.markers, by.x="Markers", by.y="gene", all.y=TRUE)
   
+  proportionID <- add %>% group_by(cluster, Cell.Type) %>% mutate(count=length(Cell.Type)) %>% group_by(cluster) %>% mutate(prop=count/length(cluster))
+  
   #Subset identity and cluster numbers
-  ids <- add %>% select("Cell.Type", "cluster") %>% unique()
+  ids <- proportionID %>% select("Cell.Type", "cluster", "prop") %>% unique()
+  
+  #Sort by proportion of genes in marker list
+  ids <- ids[order(ids$cluster, ids$prop),]
   
   #Gather identities if multiple per cluster
-  ids <- ids %>% group_by(cluster) %>% mutate(label=paste(Cell.Type, collapse=",")) %>% select(-Cell.Type) %>% unique()
+  ids <- ids %>% group_by(cluster) %>% mutate(label=paste(rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[1], 
+                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[2], 
+                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[3],
+                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[4], sep=",")) %>% select(-Cell.Type, -prop) %>% unique()
   
   #Remove "NA," values 
-  ids$label <- str_replace_all(ids$label, "NA,", "") 
+  ids$label <- gsub("NA*\\(.*?\\),", "", ids$label)
   
   #Convert "NA" character to NA
-  ids$label[ids$label == "NA"] <- NA
+  ids$label[grepl("NA\\(", ids$label)] <- NA
+  
+  ids <-separate(ids, col = label, into = c("label1", "label2", "label3"), sep=",")
   
   #Reorder
   ids <- ids[order(ids$cluster),]
@@ -68,4 +78,47 @@ assign.identity <- function(seurat_object, markers){
   return(ids)
 }
   
+# Assign cell identities using Panglao
+assign.pldb <- function(seurat_object, pldb){
   
+  #Find significant marker genes for each cluster
+  all.markers <- FindAllMarkers(seurat_object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, verbose = FALSE)
+  
+  #Reformat
+  markers <- data.frame(Cell.Type = pldb$cell.type, Markers = pldb$official.gene.symbol)
+  
+  #Make sure both gene names are in sentence case
+  markers$Markers <- str_to_sentence(markers$Markers)
+  all.markers$gene <- str_to_sentence(all.markers$gene)
+  
+  #Merge identity on if available
+  add <- merge(markers, all.markers, by.x="Markers", by.y="gene", all.y=TRUE)
+  
+  proportionID <- add %>% group_by(cluster, Cell.Type) %>% mutate(count=length(Cell.Type)) %>% group_by(cluster) %>% mutate(prop=count/length(cluster))
+  
+  #Subset identity and cluster numbers
+  ids <- proportionID %>% select("Cell.Type", "cluster", "prop") %>% unique()
+  
+  #Sort by proportion of genes in marker list
+  ids <- ids[order(ids$cluster, ids$prop),]
+  
+  #Gather identities if multiple per cluster
+  ids <- ids %>% group_by(cluster) %>% mutate(label=paste(rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[1], 
+                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[2], 
+                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[3],
+                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[4], sep=",")) %>% select(-Cell.Type, -prop) %>% unique()
+  
+  #Remove "NA," values 
+  ids$label <- gsub("NA*\\(.*?\\),", "", ids$label)
+  
+  #Convert "NA" character to NA
+  ids$label[grepl("NA\\(", ids$label)] <- NA
+  
+  ids <- separate(ids, col = label, into = c("label1", "label2", "label3"), sep=",")
+  
+  #Reorder
+  ids <- ids[order(ids$cluster),]
+  
+  #Return
+  return(ids)
+}

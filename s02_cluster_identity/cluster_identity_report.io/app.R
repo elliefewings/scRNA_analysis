@@ -61,7 +61,7 @@ ui <- shinyUI(fluidPage(
                         
                         # PCA plots
                         fluidRow(tags$hr(style="border-color: black;")),
-                        fluidRow(column(3, align="center", h3(tags$b("Cell Type Markers"))), column(7, align="center", h3(tags$b("UMAP Clustering"))), column(2, textInput("gene", "Show feature:", ""), actionButton("search", "Search"))),
+                        fluidRow(column(3, align="center", h3(tags$b(textOutput("headmarkers")))), column(7, align="center", h3(tags$b("UMAP Clustering"))), column(2, textInput("gene", "Show feature:", ""), actionButton("search", "Search"))),
                         fluidRow(column(3, align="center", offset=1, id="vert", wellPanel(tableOutput("markers"))), column(8, id="vert", align="center", plotOutput("umap", width="80%", height="700px"))),
                         fluidRow(tags$hr(style="border-color: black;"))
                         
@@ -117,16 +117,21 @@ server <- shinyServer(function(input, output, session) {
     #Set heatmap
     output$heatmap <- renderPlot(heat)
     
-    #Set markers table
-    #colnames(ids) <- c("")
-    
-    #Set PCA and feature plot event
-    if (opt2$markers != "") { 
-      
-      #Set markers table
-      output$markers <- renderTable(ids)
+    #Render id table label
+    output$headmarkers <- renderText("Cell Type Markers")
+
+    #Create shortened ID table if generated from Panglao
+    if (opt2$markers == "") {
+      ids <- ids[1:4]
+      output$headmarkers <- renderText("Cell Type Markers (predicted by PanglaoDB)")
+    }
+  
+   output$markers <- renderTable(ids)
+  
+   #Render labelled clusters       
       output$umap <- renderPlot(pca2 + theme(text = element_text(size=20)))
       
+  #Allow gene search
       featurePlotter <- eventReactive(input$search, {
         if (input$gene == "") {
           plot.g <- pca2 + theme(text = element_text(size=20))
@@ -145,40 +150,8 @@ server <- shinyServer(function(input, output, session) {
           plot.g
         })
       })
-    } else {
       
-      #Set markers table
-      output$markers <- renderTable(
-        validate(
-        need(exists("ids"), "No markers supplied")
-      ))
-      
-      output$umap <- renderPlot(pca + theme(text = element_text(size=20)))
-      
-      featurePlotter <- eventReactive(input$search, {
-        if (input$gene == "") {
-          plot.g <- pca + theme(text = element_text(size=20))
-          
-        }
-        if (input$gene != "") {
-          genen <- str_to_title(input$gene) %>% str_replace("MT-", mt.patt)
-          plot.g <- FeaturePlot(data, features = genen) + theme(text = element_text(size=20))
-        }
-        plot.g
-      })
-      
-      observeEvent(input$search, {
-        output$umap <- renderPlot({
-          plot.g <- featurePlotter()
-          plot.g
-        })
-      })
-      
-      
-    }
-    
-    
-  })
+    })
   
 })
 

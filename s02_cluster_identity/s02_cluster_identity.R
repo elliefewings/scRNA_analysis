@@ -56,7 +56,7 @@
 #############
 
 ## Load libraries
-libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "clustree")
+libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "clustree", "tidyr")
 
 for (i in libs) {
   if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) { 
@@ -92,7 +92,9 @@ option_list <- list(
   make_option(c("--res", "-k"), action="store", default=0.5, type='numeric',
               help="Resolution for clustering (see clustree output in s01 report)[default = 0.5]"),
   make_option(c("--markers", "-m"), action="store", default="", type='character',
-              help="Path to text file containing marker genes, see README for example")
+              help="Path to text file containing marker genes, see README for example"),
+  make_option(c("--species", "-s"), action="store", default="mouse", type='character',
+              help="Species for assigning cell type identity ('mouse' or 'human')[default = 'mouse']")
 )
 
 opt2 <- parse_args(OptionParser(option_list=option_list))
@@ -136,6 +138,7 @@ if (opt2$markers != "" & !file.exists(opt2$markers)) {
 ## Load data ##
 ###############
 #opt2$input <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/data/CK114/pipeline_output/s01_qc_processing.Rdata"
+#opt2$output <- dirname(opt2$input)
 
 # Load Rdata from input
 load(opt2$input)
@@ -195,7 +198,7 @@ if (opt2$markers != "") {
   ids <- assign.identity(data, marker)
   
   # If found, apply cell type to cluster
-  ids$label <- ifelse(is.na(ids$label), levels(ids$cluster), paste(ids$cluster, ids$label,  sep="-"))
+  ids$label <- ifelse(ids$label1 == "NA(1)", levels(ids$cluster), paste(ids$cluster, ids$label1,  sep="-"))
   
   # Set new ids
   new.ids <- ids$label
@@ -206,6 +209,33 @@ if (opt2$markers != "") {
   
   # Replot with new cell identities
   pca2 <- DimPlot(data, reduction = "umap", label = TRUE, pt.size = 1, label.size = 6) 
+  }
+
+if (opt2$markers == "") { 
+
+  # Use Panglao database if no markers
+  pldb <- read.table(gzfile(paste(dirname(script.dir), "/source/PanglaoDB_markers_27_Mar_2020.tsv.gz", sep="")), sep = "\t", header=TRUE)
+
+  #Filter database by species
+  sp <- ifelse(opt2$species == "mouse", "Mm", "Hs")
+  pldb <- pldb %>% filter(grepl(sp, pldb$species))
+  
+  #Reformat db
+  ids <- assign.pldb(data, pldb)
+  
+  # If found, apply cell type to cluster
+  ids$label <- ifelse(ids$label1 == "NA(1)", levels(ids$cluster), paste(ids$cluster, ids$label1,  sep="-"))
+  
+  # Set new ids
+  new.ids <- ids$label
+  
+  names(new.ids) <- levels(data)
+  
+  data <- RenameIdents(data, new.ids)
+  
+  # Replot with new cell identities
+  pca2 <- DimPlot(data, reduction = "umap", label = TRUE, pt.size = 1, label.size = 6) 
+  
   }
 
 #######################
