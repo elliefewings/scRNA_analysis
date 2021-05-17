@@ -32,11 +32,13 @@ get_npcs <- function(seurat_object, create_plot = T){
   
 }
 
-# Assign cell identities using file of marker genes and likely cell types
+
+##Assign identity function
 assign.identity <- function(seurat_object, markers){
   
   #Find significant marker genes for each cluster
   all.markers <- FindAllMarkers(seurat_object, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, verbose = FALSE)
+  all.markers <- all.markers[!grepl(",", all.markers$cluster),]
   
   #Create one row for each cell.type label and marker gene
   identity <- strsplit(markers$Markers, ",")
@@ -57,19 +59,19 @@ assign.identity <- function(seurat_object, markers){
   #Sort by proportion of genes in marker list
   ids <- ids[order(ids$cluster, ids$prop),]
   
-  #Gather identities if multiple per cluster
-  ids <- ids %>% group_by(cluster) %>% mutate(label=paste(rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[1], 
-                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[2], 
-                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[3],
-                                                          rev(paste(Cell.Type, "(", round(prop, 4), ")", sep=""))[4], sep=",")) %>% select(-Cell.Type, -prop) %>% unique()
+  #Add formatted column
+  ids$name <- paste(ids$Cell.Type, "(", round(ids$prop, 4), ")", sep="")
+  
+  #Add label column
+  ids <- ids %>% group_by(cluster) %>% summarise(label = toString(rev(name))) %>% ungroup()
   
   #Remove "NA," values 
   ids$label <- gsub("NA*\\(.*?\\),", "", ids$label)
   
   #Convert "NA" character to NA
-  ids$label[grepl("NA\\(", ids$label)] <- NA
+  ids$label[grepl("NA", ids$label)] <- NA
   
-  ids <-separate(ids, col = label, into = c("label1", "label2", "label3"), sep=",")
+  ids <- separate(ids, col = label, into = c("label1", "label2", "label3"), sep=",")
   
   #Reorder
   ids <- ids[order(ids$cluster),]

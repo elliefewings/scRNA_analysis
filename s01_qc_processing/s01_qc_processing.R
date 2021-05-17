@@ -66,15 +66,8 @@ libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "g
 
 for (i in libs) {
   if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) { 
-    install.packages(i, repos = "https://ftp.fau.de/cran/")
-    if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) {
-      stop(paste("Unable to install package: ", i, ". Please install manually and restart.", sep=""))
-      }
-    }
-}
-
-if (is.null(webshot:::find_phantom())) {
-  webshot::install_phantomjs()
+    stop(paste("Unable to find package: ", i, ". Please install and restart.", sep=""))
+  }
 }
 
 ## Find script directory
@@ -391,7 +384,7 @@ clust <- suppressWarnings(clustree(data)) + theme(
 #######################
 
 # Remove old data
-suppressWarnings(rm(i, data.meta, input_data, libs, initial.options, hashdir, joint.bcs, option_list))
+suppressWarnings(rm(i, data.meta, input_data, libs, initial.options, hashdir, joint.bcs, option_list, get_npcs, assign.identity, assign.pldb))
 
 # Create output directory
 dir.create(opt$output, showWarnings = FALSE)

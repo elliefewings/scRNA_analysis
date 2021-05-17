@@ -60,16 +60,10 @@ libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "g
 
 for (i in libs) {
   if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) { 
-    install.packages(i, repos = "https://ftp.fau.de/cran/")
-    if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) {
-      stop(paste("Unable to install package: ", i, ". Please install manually and restart.", sep=""))
-      }
-    }
+    stop(paste("Unable to find package: ", i, ". Please install and restart.", sep=""))
+  }
 }
 
-if (is.null(webshot:::find_phantom())) {
-  webshot::install_phantomjs()
-}
 
 ## Find script directory
 initial.options <- commandArgs(trailingOnly = FALSE)
@@ -77,9 +71,6 @@ script.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial
 
 #For testing
 #script.dir <- "C:/Users/ellie/OneDrive/Saez/Pipeline/github/scRNA_analysis/s02_cluster_identity/"
-
-## Source functions
-source(paste(script.dir, "/../source/source.R", sep=""))
 
 ## Get options
 option_list <- list(
@@ -151,6 +142,10 @@ script.dir <- dirname(sub("--file=", "", initial.options[grep("--file=", initial
 # Clean-up previous script data
 rm(data.meta.summ, i, indir, libs, pca, qc1, qc1.f, qc2, qc2.f, qc3, qc3.f)
 
+
+## Source functions
+source(paste(script.dir, "/../source/source.R", sep=""))
+
 ######################
 ## Cluster and UMAP ##
 ######################
@@ -180,7 +175,7 @@ all.markers <- suppressMessages(FindAllMarkers(data, only.pos = TRUE, min.pct = 
 ngenes <- round(100/nlevels(all.markers$cluster))
 
 # Gather 100 genes total from top of each cluster
-top <- all.markers %>% group_by(cluster) %>% top_n(ngenes, avg_logFC)
+top <- all.markers %>% group_by(cluster) %>% top_n(ngenes, avg_log2FC)
 
 # Plot heatmap
 heat <- suppressWarnings(DoHeatmap(object = data, features = top$gene, label = TRUE))
@@ -198,7 +193,7 @@ if (opt2$markers != "") {
   ids <- assign.identity(data, marker)
   
   # If found, apply cell type to cluster
-  ids$label <- ifelse(ids$label1 == "NA(1)", levels(ids$cluster), paste(ids$cluster, ids$label1,  sep="-"))
+  ids$label <- ifelse(is.na(ids$label1), levels(ids$cluster), paste(ids$cluster, ids$label1,  sep="-"))
   
   # Set new ids
   new.ids <- ids$label
