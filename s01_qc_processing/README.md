@@ -7,6 +7,11 @@
 
     If you don't have an appropriate Cellranger count output (outs/filtered_feature_bc_matrix), you can create this from fastqs using [this cellranger wrapper](https://github.com/elliefewings/scRNA_raw_data_toolkit)
 
+## Installation
+Required R packages can be found in install.R file.
+
+R package [magick](https://cran.r-project.org/web/packages/magick/vignettes/intro.html) is required and best installed using [Conda](https://anaconda.org/conda-forge/r-magick).
+  
 ### Basic process:
   1. Creation of quality control plots
   2. Filtering of cells and features based on default or input criteria

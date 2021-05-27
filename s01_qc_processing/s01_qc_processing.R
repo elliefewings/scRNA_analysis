@@ -62,7 +62,7 @@
 #############
 
 ## Load libraries
-libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "gridExtra", "RColorBrewer", "clustree")
+libs <- c("Seurat", "dplyr", "GetoptLong", "optparse", "magrittr", "stringr", "ggplot2", "webshot", "shiny", "gridExtra", "RColorBrewer", "clustree", "scDblFinder", "magick")
 
 for (i in libs) {
   if (! suppressPackageStartupMessages(suppressWarnings(require(i, character.only = TRUE, quietly = TRUE)))) { 
@@ -339,6 +339,8 @@ if (!is.null(opt$hashtag)) {
                                                med_percent.mt = median(percent.mt),
                                                min_percent.mt = min(percent.mt),
                                                max_percent.mt = max(percent.mt)) %>% t()
+  #Count number of singlets
+  nsinglets <- sum(db.count$Var1 == "Singlet")
   
   }
 
@@ -379,6 +381,41 @@ clust <- suppressWarnings(clustree(data)) + theme(
   legend.text = element_text(size = 12)) +
   guides(colour = guide_legend(override.aes = list(size=5)))
 
+############################
+## Doublet Identification ##
+############################
+
+if (is.null(opt$hashtag)) {
+  # Primary clustering for doublet identification
+  data <- FindClusters(data, resolution = 0.2, verbose = FALSE)
+  
+  # Run UMAP
+  data <- invisible(RunUMAP(data, reduction = "pca", dims = 1:npcs$npcs, verbose = FALSE))
+  
+  
+  #Doublet finding
+  doublets <- suppressMessages(scDblFinder(sce = as.matrix(data@assays$RNA@counts), clusters = data@meta.data$seurat_clusters, verbose=FALSE))
+  data$doublet_score <- doublets$scDblFinder.score
+  data$doublet <- doublets$scDblFinder.class
+  
+  nsinglets <- sum(doublets$scDblFinder.class == "singlet")
+  
+  data <- subset(data, subset= doublet == "singlet")
+  
+  data.meta <- data@meta.data
+  
+  data.meta.summ$Singlets <- summarise(data.meta, ncells = length(orig.ident),
+                                       med_nCount_RNA = median(nCount_RNA),
+                                       min_nCount_RNA = min(nCount_RNA),
+                                       max_nCount_RNA = max(nCount_RNA),
+                                       med_nFeature_RNA = median(nFeature_RNA),
+                                       min_nFeature_RNA = min(nFeature_RNA),
+                                       max_nFeature_RNA = max(nFeature_RNA),
+                                       med_percent.mt = median(percent.mt),
+                                       min_percent.mt = min(percent.mt),
+                                       max_percent.mt = max(percent.mt)) %>% t()
+}
+
 #######################
 ## Clean up and Save ##
 #######################
@@ -405,12 +442,24 @@ source(paste(script.dir, "/qc_processing_report.pdf/app.R", sep=""))
 # Create app
 app <- shinyApp(ui = ui, server = server)
 
-# Create PDF screenshot of app
-appshot(app,  paste(opt$output, "/", sample, ".qcprocessing.report.pdf", sep=""),  envvars = c(rdata = rdata), delay=10, port = getOption("shiny.port"), vwidth = 1500)
-
-# Create HTML with link to shiny app io
+# Create PDF, PNG and HTML file names
+png <- paste(opt$output, "/", sample, ".qcprocessing.report.png", sep="")
+pdf <- paste(opt$output, "/", sample, ".qcprocessing.report.pdf", sep="")
 out.html <- paste(opt$output, "/", sample, ".qcprocessing.report.html", sep="")
 
+# Create png of app
+appshot(app, png,  envvars = c(rdata = rdata), delay=10, port = getOption("shiny.port"), vwidth = 1500)
+
+# Read image in magick format
+img <- image_read(png)
+
+# Rewrite as pdf
+image_write(img, format = "pdf", pdf)
+
+# Delete PNG
+file.remove(png)
+
+# Create HTML with link to shiny app io
 fileConn <- file(out.html)
 writeLines(c("<html>",
              "<head>",

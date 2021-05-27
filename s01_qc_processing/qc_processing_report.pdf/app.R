@@ -7,7 +7,7 @@
 #    http://shiny.rstudio.com/
 #
 
-load(rdata)
+#load(rdata)
 
 # Define UI for application
 ui <- shinyUI(fluidPage(
@@ -23,7 +23,7 @@ ui <- shinyUI(fluidPage(
          '))),
   
    # Application title
-   titlePanel(textOutput("title")),
+   titlePanel(htmlOutput("title")),
    fluidRow(HTML("<h3>For interactive report, load RData output here: <a href='https://saezlab.shinyapps.io/qc_processing_report'> </a></h3>")),
    fluidRow(tags$hr(style="border-color: black;")),
    #Summary data
@@ -60,8 +60,20 @@ ui <- shinyUI(fluidPage(
 # Define server logic
 server <- shinyServer(function(input, output, session) {
    
-  #Set text outputs 
-  output$title <- renderText({paste("QC and Data Processing Report:", sample)})
+  #Set text outputs
+  #Set title based on data quality
+  headtitle <- NULL
+  
+  #Set title and colour if > 1000 cells
+  headtitle[nsinglets > 1000] <- paste("QC Report:", sample)
+  
+  #Set title and colour if between 500 and 1000 cells
+  headtitle[nsinglets > 500 & nsinglets <= 1000] <- paste("QC Report: ", sample, ' <font style=color:orange !important >(WARNING: Fewer than 1000 singlets)</font>', sep="")
+  
+  #Set title and colour if < 500 cells
+  headtitle[nsinglets <= 500] <- paste("QC Report: ", sample, ' <font color="red">(WARNING: Fewer than 500 singlets)</font>', sep="")
+  
+  output$title <- renderText({HTML(headtitle)})
 
   inshort <- ifelse(nchar(opt$input) > 50, 
                     substr(opt$input, nchar(opt$input)-50, nchar(opt$input)),
